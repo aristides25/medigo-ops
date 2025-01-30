@@ -1,5 +1,11 @@
 export type EmergencyType = 'CARDIAC' | 'TRAUMA' | 'RESPIRATORY' | 'GENERAL';
-export type EmergencyStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+export type EmergencyStatus = 
+    | 'PENDING'
+    | 'ACTIVE'
+    | 'IN_PROGRESS'
+    | 'ON_SITE'
+    | 'COMPLETED'
+    | 'CANCELLED';
 export type ParamedicStatus = 'AVAILABLE' | 'BUSY' | 'OFFLINE';
 export type Priority = 'HIGH' | 'MEDIUM' | 'LOW';
 
@@ -14,6 +20,15 @@ export interface PatientInfo {
     age?: number;
     gender?: string;
     phone?: string;
+    bloodType?: string;
+    medicalConditions?: string[];
+    allergies?: string[];
+    medications?: string[];
+    emergencyContact?: {
+        name: string;
+        relationship: string;
+        phone: string;
+    };
 }
 
 export interface EmergencyRequest {
@@ -25,5 +40,8 @@ export interface EmergencyRequest {
     patientInfo: PatientInfo;
     description: string;
     createdAt: Date;
-    distance?: number; // Distancia calculada al paramédico
+    acceptedAt?: Date;
+    completedAt?: Date;
+    distance?: number;
+    notes?: string[];
 } 

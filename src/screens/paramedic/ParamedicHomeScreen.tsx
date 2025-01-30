@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Switch } from 'react-native';
 import { Text, Icon } from '@rneui/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmergencyRequestCard } from '../../components/EmergencyRequestCard';
+import { ActiveEmergencyCard } from '../../components/ActiveEmergencyCard';
 import { MOCK_EMERGENCY_REQUESTS } from '../../constants/mockData';
 import { EmergencyRequest, ParamedicStatus } from '../../types/emergency';
 
@@ -12,16 +13,46 @@ export const ParamedicHomeScreen = () => {
   const [pendingRequests, setPendingRequests] = useState(MOCK_EMERGENCY_REQUESTS);
 
   const handleAcceptRequest = (request: EmergencyRequest) => {
-    setActiveRequest(request);
+    const updatedRequest = {
+      ...request,
+      status: 'ACTIVE' as const,
+      acceptedAt: new Date()
+    };
+    setActiveRequest(updatedRequest);
     setPendingRequests(prev => prev.filter(r => r.id !== request.id));
+    setIsAvailable(false);
   };
 
   const handleRejectRequest = (requestId: string) => {
     setPendingRequests(prev => prev.filter(r => r.id !== requestId));
   };
 
-  const handleCompleteRequest = () => {
-    setActiveRequest(null);
+  const handleUpdateStatus = () => {
+    if (!activeRequest) return;
+
+    const nextStatus = (() => {
+      switch (activeRequest.status) {
+        case 'ACTIVE':
+          return 'IN_PROGRESS';
+        case 'IN_PROGRESS':
+          return 'ON_SITE';
+        case 'ON_SITE':
+          return 'COMPLETED';
+        default:
+          return activeRequest.status;
+      }
+    })();
+
+    setActiveRequest({
+      ...activeRequest,
+      status: nextStatus,
+      ...(nextStatus === 'COMPLETED' ? { completedAt: new Date() } : {})
+    });
+
+    if (nextStatus === 'COMPLETED') {
+      setActiveRequest(null);
+      setIsAvailable(true);
+    }
   };
 
   return (
@@ -46,6 +77,7 @@ export const ParamedicHomeScreen = () => {
                 onValueChange={setIsAvailable}
                 trackColor={{ false: '#E2E8F0', true: '#BBF7D0' }}
                 thumbColor={isAvailable ? '#22C55E' : '#94A3B8'}
+                disabled={!!activeRequest}
               />
             </View>
             <View style={styles.statusContainer}>
@@ -65,9 +97,9 @@ export const ParamedicHomeScreen = () => {
           {activeRequest && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Solicitud Activa</Text>
-              <EmergencyRequestCard
+              <ActiveEmergencyCard
                 request={activeRequest}
-                onPress={() => {/* Navegar a detalles */}}
+                onUpdateStatus={handleUpdateStatus}
               />
             </View>
           )}
