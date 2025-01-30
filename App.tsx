@@ -3,38 +3,44 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ThemeProvider } from '@rneui/themed';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { AuthProvider } from './src/context/AuthContext';
 import { LoginScreen } from './src/screens/auth/LoginScreen';
 import { ParamedicHomeScreen } from './src/screens/paramedic/ParamedicHomeScreen';
+import { EmergencyDetailsScreen } from './src/screens/paramedic/EmergencyDetailsScreen';
 
 const Stack = createNativeStackNavigator();
 
-const Navigation = () => {
-  const { isAuthenticated } = useAuth();
-
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
-        // Auth Stack
-        <Stack.Screen name="Login" component={LoginScreen} />
-      ) : (
-        // Home Stack
-        <Stack.Screen name="Home" component={ParamedicHomeScreen} />
-      )}
-    </Stack.Navigator>
-  );
-};
-
 export default function App() {
   return (
-    <ThemeProvider>
-      <SafeAreaProvider>
-        <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <SafeAreaProvider>
           <NavigationContainer>
-            <Navigation />
+            <Stack.Navigator>
+              <Stack.Screen 
+                name="Login" 
+                component={LoginScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen 
+                name="ParamedicHome" 
+                component={ParamedicHomeScreen}
+                options={{
+                  title: 'Panel de Emergencias',
+                  headerBackVisible: false,
+                }}
+              />
+              <Stack.Screen 
+                name="EmergencyDetails" 
+                component={EmergencyDetailsScreen}
+                options={{
+                  title: 'Detalles de Emergencia',
+                }}
+              />
+            </Stack.Navigator>
           </NavigationContainer>
-        </AuthProvider>
-      </SafeAreaProvider>
-    </ThemeProvider>
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

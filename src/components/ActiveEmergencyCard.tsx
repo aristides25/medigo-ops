@@ -7,6 +7,7 @@ interface ActiveEmergencyCardProps {
     request: EmergencyRequest;
     onComplete?: () => void;
     onUpdateStatus?: () => void;
+    onViewDetails?: () => void;
 }
 
 const getStatusText = (status: EmergencyStatus) => {
@@ -28,10 +29,24 @@ const getStatusText = (status: EmergencyStatus) => {
     }
 };
 
+const getUpdateButtonText = (status: EmergencyStatus) => {
+    switch (status) {
+        case 'ACTIVE':
+            return 'Marcar Llegando';
+        case 'IN_PROGRESS':
+            return 'Marcar En Sitio';
+        case 'ON_SITE':
+            return 'Completar Servicio';
+        default:
+            return 'Actualizar Estado';
+    }
+};
+
 export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
     request,
     onComplete,
-    onUpdateStatus
+    onUpdateStatus,
+    onViewDetails
 }) => {
     const handleOpenMaps = () => {
         const { latitude, longitude } = request.location;
@@ -50,7 +65,10 @@ export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
         <View style={styles.card}>
             {/* Header con estado */}
             <View style={styles.header}>
-                <View style={styles.statusContainer}>
+                <TouchableOpacity 
+                    style={styles.statusContainer}
+                    onPress={onViewDetails}
+                >
                     <Icon
                         name="ambulance"
                         type="font-awesome-5"
@@ -60,7 +78,13 @@ export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
                     <Text style={styles.statusText}>
                         {getStatusText(request.status)}
                     </Text>
-                </View>
+                    <Icon
+                        name="chevron-right"
+                        type="font-awesome-5"
+                        size={16}
+                        color="#64748B"
+                    />
+                </TouchableOpacity>
                 <Text style={styles.timeElapsed}>12:34</Text>
             </View>
 
@@ -122,7 +146,9 @@ export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
                         size={16}
                         color="#FFFFFF"
                     />
-                    <Text style={styles.buttonText}>Actualizar</Text>
+                    <Text style={styles.buttonText}>
+                        {getUpdateButtonText(request.status)}
+                    </Text>
                 </TouchableOpacity>
             </View>
         </View>

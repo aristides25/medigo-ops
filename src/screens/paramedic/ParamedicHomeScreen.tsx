@@ -1,13 +1,22 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Switch } from 'react-native';
+import { View, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
 import { Text, Icon } from '@rneui/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmergencyRequestCard } from '../../components/EmergencyRequestCard';
 import { ActiveEmergencyCard } from '../../components/ActiveEmergencyCard';
 import { MOCK_EMERGENCY_REQUESTS } from '../../constants/mockData';
-import { EmergencyRequest, ParamedicStatus } from '../../types/emergency';
+import { EmergencyRequest } from '../../types/emergency';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ParamedicStackParamList } from '../../navigation/ParamedicStack';
+import { serializeDate } from '../../utils/dateUtils';
+import { useAuth } from '../../context/AuthContext';
+
+type NavigationProp = NativeStackNavigationProp<ParamedicStackParamList>;
 
 export const ParamedicHomeScreen = () => {
+  const navigation = useNavigation<NavigationProp>();
+  const { logout } = useAuth();
   const [isAvailable, setIsAvailable] = useState(true);
   const [activeRequest, setActiveRequest] = useState<EmergencyRequest | null>(null);
   const [pendingRequests, setPendingRequests] = useState(MOCK_EMERGENCY_REQUESTS);
@@ -55,20 +64,39 @@ export const ParamedicHomeScreen = () => {
     }
   };
 
+  const handleViewDetails = (request: EmergencyRequest) => {
+    const serializedRequest = {
+      ...request,
+      createdAt: serializeDate(request.createdAt),
+      acceptedAt: request.acceptedAt ? serializeDate(request.acceptedAt) : undefined,
+      completedAt: request.completedAt ? serializeDate(request.completedAt) : undefined,
+    };
+    navigation.navigate('EmergencyDetails', { request: serializedRequest });
+  };
+
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
-          <Text h4 style={styles.headerTitle}>Panel de Emergencias</Text>
           <View style={styles.connectionStatus}>
             <View style={[styles.connectionIndicator, { backgroundColor: '#22C55E' }]} />
             <Text style={styles.connectionText}>Online</Text>
           </View>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <Icon
+              name="power-off"
+              type="font-awesome"
+              size={16}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content}>
-          {/* Status Card */}
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Estado Actual</Text>
@@ -93,18 +121,17 @@ export const ParamedicHomeScreen = () => {
             </View>
           </View>
 
-          {/* Active Request */}
           {activeRequest && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Solicitud Activa</Text>
               <ActiveEmergencyCard
                 request={activeRequest}
                 onUpdateStatus={handleUpdateStatus}
+                onViewDetails={() => handleViewDetails(activeRequest)}
               />
             </View>
           )}
 
-          {/* Pending Requests */}
           {isAvailable && pendingRequests.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Solicitudes Pendientes</Text>
@@ -114,13 +141,12 @@ export const ParamedicHomeScreen = () => {
                   request={request}
                   onAccept={() => handleAcceptRequest(request)}
                   onReject={() => handleRejectRequest(request.id)}
-                  onPress={() => {/* Navegar a detalles */}}
+                  onPress={() => handleViewDetails(request)}
                 />
               ))}
             </View>
           )}
 
-          {/* Empty State */}
           {isAvailable && pendingRequests.length === 0 && !activeRequest && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Solicitudes Pendientes</Text>
@@ -146,15 +172,13 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#1E293B',
   },
   connectionStatus: {
     flexDirection: 'row',
@@ -170,8 +194,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
   },
+  logoutButton: {
+    padding: 8,
+  },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
   },
   card: {
@@ -192,7 +221,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   cardTitle: {
     fontSize: 16,
@@ -214,13 +243,13 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   section: {
-    marginTop: 24,
+    marginTop: 16,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#475569',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   emptyText: {
     textAlign: 'center',

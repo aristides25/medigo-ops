@@ -44,4 +44,10 @@ export interface EmergencyRequest {
     completedAt?: Date;
     distance?: number;
     notes?: string[];
+}
+
+export interface SerializedEmergencyRequest extends Omit<EmergencyRequest, 'createdAt' | 'acceptedAt' | 'completedAt'> {
+    createdAt: string;
+    acceptedAt?: string;
+    completedAt?: string;
 } 

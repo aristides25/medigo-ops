@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { AuthState, LoginCredentials, ParamedicProfile } from '../types/auth.types';
 
 interface AuthContextType extends AuthState {
@@ -64,8 +64,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     error: null,
   });
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginCredentials) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
+    
     try {
       // Simulación de delay de red
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -80,35 +81,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Omitir el campo password antes de guardar en el estado
       const { password, ...paramedicData } = paramedic;
 
+      // Actualizamos el estado de forma atómica
       setState({
-        user: paramedicData,
         isAuthenticated: true,
         isLoading: false,
+        user: paramedicData,
         error: null,
       });
+
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Credenciales inválidas. Por favor verifica tus datos.',
+      setState({
         isAuthenticated: false,
+        isLoading: false,
         user: null,
-      }));
+        error: 'Credenciales inválidas. Por favor verifica tus datos.',
+      });
       throw error;
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setState({
-      user: null,
       isAuthenticated: false,
       isLoading: false,
+      user: null,
       error: null,
     });
+  }, []);
+
+  const value = {
+    ...state,
+    login,
+    logout,
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
