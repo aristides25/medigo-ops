@@ -1,13 +1,13 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Text, Icon } from '@rneui/themed';
 import { EmergencyRequest } from '../types/emergency';
 
 interface EmergencyRequestCardProps {
     request: EmergencyRequest;
-    onAccept?: () => void;
-    onReject?: () => void;
-    onPress?: () => void;
+    onAccept: () => void;
+    onReject: () => void;
+    onPress: () => void;
 }
 
 const getEmergencyIcon = (type: EmergencyRequest['type']) => {
@@ -36,22 +36,36 @@ const getPriorityColor = (priority: EmergencyRequest['priority']) => {
     }
 };
 
-const formatTimeAgo = (date: Date) => {
-    const minutes = Math.floor((Date.now() - date.getTime()) / 1000 / 60);
-    if (minutes < 1) return 'Ahora';
-    if (minutes === 1) return 'Hace 1 minuto';
-    if (minutes < 60) return `Hace ${minutes} minutos`;
-    const hours = Math.floor(minutes / 60);
-    if (hours === 1) return 'Hace 1 hora';
-    return `Hace ${hours} horas`;
-};
-
 export const EmergencyRequestCard: React.FC<EmergencyRequestCardProps> = ({
     request,
     onAccept,
     onReject,
     onPress
 }) => {
+    const [elapsedTime, setElapsedTime] = useState('00:00');
+
+    useEffect(() => {
+        const updateElapsedTime = () => {
+            const now = new Date();
+            const created = new Date(request.createdAt);
+            const diff = now.getTime() - created.getTime();
+            
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            setElapsedTime(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+        };
+
+        // Actualizar inmediatamente
+        updateElapsedTime();
+
+        // Actualizar cada segundo
+        const interval = setInterval(updateElapsedTime, 1000);
+
+        // Limpiar el intervalo cuando el componente se desmonte
+        return () => clearInterval(interval);
+    }, [request.createdAt]);
+
     return (
         <TouchableOpacity onPress={onPress}>
             <View style={styles.card}>
@@ -76,26 +90,50 @@ export const EmergencyRequestCard: React.FC<EmergencyRequestCardProps> = ({
                     <Text style={styles.description}>{request.description}</Text>
                     <Text style={styles.address}>{request.location.address}</Text>
                     <View style={styles.infoRow}>
-                        <Text style={styles.timeAgo}>{formatTimeAgo(request.createdAt)}</Text>
-                        <Text style={styles.distance}>{request.distance} km</Text>
+                        <View style={styles.timeContainer}>
+                            <Icon
+                                name="clock"
+                                type="font-awesome-5"
+                                size={14}
+                                color="#64748B"
+                                style={styles.timeIcon}
+                            />
+                            <Text style={styles.timeAgo}>{elapsedTime}</Text>
+                        </View>
+                        <Text style={styles.distance}>
+                            {request.distance ? `${request.distance.toFixed(1)} km` : 'Calculando...'}
+                        </Text>
                     </View>
                 </View>
 
                 {/* Actions */}
-                {(onAccept || onReject) && (
-                    <View style={styles.actions}>
-                        {onReject && (
-                            <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={onReject}>
-                                <Text style={styles.buttonText}>Rechazar</Text>
-                            </TouchableOpacity>
-                        )}
-                        {onAccept && (
-                            <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={onAccept}>
-                                <Text style={[styles.buttonText, styles.acceptButtonText]}>Aceptar</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                )}
+                <View style={styles.actions}>
+                    <TouchableOpacity 
+                        style={[styles.button, styles.acceptButton]} 
+                        onPress={onAccept}
+                    >
+                        <Icon
+                            name="check"
+                            type="font-awesome-5"
+                            size={16}
+                            color="#FFFFFF"
+                        />
+                        <Text style={styles.buttonText}>Aceptar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        style={[styles.button, styles.rejectButton]} 
+                        onPress={onReject}
+                    >
+                        <Icon
+                            name="times"
+                            type="font-awesome-5"
+                            size={16}
+                            color="#FFFFFF"
+                        />
+                        <Text style={styles.buttonText}>Rechazar</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </TouchableOpacity>
     );
@@ -160,9 +198,17 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    timeContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    timeIcon: {
+        marginRight: 4,
+    },
     timeAgo: {
-        fontSize: 12,
-        color: '#94A3B8',
+        fontSize: 14,
+        color: '#64748B',
     },
     distance: {
         fontSize: 12,
@@ -190,8 +236,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#EF4444',
-    },
-    acceptButtonText: {
-        color: '#FFFFFF',
     },
 }); 

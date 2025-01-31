@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Text, Icon } from '@rneui/themed';
 import { EmergencyRequest, EmergencyStatus } from '../types/emergency';
 
@@ -48,10 +48,53 @@ export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
     onUpdateStatus,
     onViewDetails
 }) => {
+    const [elapsedTime, setElapsedTime] = useState('00:00');
+
+    useEffect(() => {
+        const updateElapsedTime = () => {
+            const now = new Date();
+            const created = new Date(request.createdAt);
+            const diff = now.getTime() - created.getTime();
+            
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            setElapsedTime(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+        };
+
+        // Actualizar inmediatamente
+        updateElapsedTime();
+
+        // Actualizar cada segundo
+        const interval = setInterval(updateElapsedTime, 1000);
+
+        // Limpiar el intervalo cuando el componente se desmonte
+        return () => clearInterval(interval);
+    }, [request.createdAt]);
+
     const handleOpenMaps = () => {
         const { latitude, longitude } = request.location;
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-        Linking.openURL(url);
+        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+        const wazeUrl = `https://waze.com/ul?ll=${latitude},${longitude}&navigate=yes`;
+
+        Alert.alert(
+            'Navegar al Paciente',
+            '¿Qué aplicación deseas usar?',
+            [
+                {
+                    text: 'Google Maps',
+                    onPress: () => Linking.openURL(googleMapsUrl)
+                },
+                {
+                    text: 'Waze',
+                    onPress: () => Linking.openURL(wazeUrl)
+                },
+                {
+                    text: 'Cancelar',
+                    style: 'cancel'
+                }
+            ]
+        );
     };
 
     const handleCall = () => {
@@ -85,7 +128,7 @@ export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
                         color="#64748B"
                     />
                 </TouchableOpacity>
-                <Text style={styles.timeElapsed}>12:34</Text>
+                <Text style={styles.timeElapsed}>{elapsedTime}</Text>
             </View>
 
             {/* Información del paciente */}
@@ -189,6 +232,7 @@ const styles = StyleSheet.create({
     timeElapsed: {
         fontSize: 14,
         color: '#64748B',
+        fontWeight: '500',
     },
     patientInfo: {
         marginBottom: 12,
