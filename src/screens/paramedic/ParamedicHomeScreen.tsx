@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Switch, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Switch, TouchableOpacity, Alert, Animated, Dimensions } from 'react-native';
 import { Text, Icon, Overlay } from '@rneui/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmergencyRequestCard } from '../../components/EmergencyRequestCard';
@@ -25,47 +25,123 @@ const EmergencyNotification: React.FC<EmergencyNotificationProps> = ({
   visible, 
   onClose 
 }) => {
+  const slideAnim = React.useRef(new Animated.Value(-300)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const { width } = Dimensions.get('window');
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          speed: 12,
+          bounciness: 8
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true
+        })
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: -300,
+          duration: 200,
+          useNativeDriver: true
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true
+        })
+      ]).start();
+    }
+  }, [visible]);
+
   if (!request) return null;
+
+  const getPriorityColor = () => {
+    switch (request.priority) {
+      case 'HIGH':
+        return '#DC2626';
+      case 'MEDIUM':
+        return '#F59E0B';
+      case 'LOW':
+        return '#10B981';
+      default:
+        return '#6B7280';
+    }
+  };
 
   return (
     <Overlay
       isVisible={visible}
       onBackdropPress={onClose}
-      overlayStyle={styles.overlay}
+      overlayStyle={[styles.overlay, { width: width - 32 }]}
+      backdropStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      animationType="fade"
     >
-      <View style={styles.notificationContainer}>
-        <View style={styles.notificationHeader}>
-          <View style={styles.notificationTitleContainer}>
-            <Icon
-              name="alert-circle"
-              type="feather"
-              size={24}
-              color="#DC2626"
-            />
-            <Text style={styles.notificationTitle}>¡Nueva Emergencia!</Text>
-          </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Icon
-              name="x"
-              type="feather"
-              size={20}
-              color="#94A3B8"
-            />
-          </TouchableOpacity>
-        </View>
+      <Animated.View
+        style={[
+          styles.notificationContainer,
+          {
+            transform: [{ translateY: slideAnim }],
+            opacity: fadeAnim
+          }
+        ]}
+      >
+        {/* Barra de prioridad */}
+        <View style={[styles.priorityBar, { backgroundColor: getPriorityColor() }]} />
 
         <View style={styles.notificationContent}>
-          <Text style={styles.notificationText}>
-            Tipo: {request.type}
-          </Text>
-          <Text style={styles.notificationText}>
-            Ubicación: {request.location.address}
-          </Text>
-          <Text style={styles.notificationText}>
-            Distancia: {request.distance ? `${request.distance.toFixed(1)} km` : 'Calculando...'}
-          </Text>
+          {/* Header */}
+          <View style={styles.notificationHeader}>
+            <View style={styles.notificationTitleContainer}>
+              <Icon
+                name="alert-circle"
+                type="feather"
+                size={24}
+                color={getPriorityColor()}
+              />
+              <Text style={styles.notificationTitle}>¡Nueva Emergencia!</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icon
+                name="x"
+                type="feather"
+                size={20}
+                color="#94A3B8"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Tipo de Emergencia */}
+          <View style={styles.emergencyTypeContainer}>
+            <Text style={styles.emergencyType}>{request.type}</Text>
+            <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor() }]}>
+              <Text style={styles.priorityText}>{request.priority}</Text>
+            </View>
+          </View>
+
+          {/* Información */}
+          <View style={styles.infoContainer}>
+            <View style={styles.infoRow}>
+              <Icon name="user" type="feather" size={16} color="#64748B" />
+              <Text style={styles.infoText}>{request.patientInfo.name}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Icon name="map-pin" type="feather" size={16} color="#64748B" />
+              <Text style={styles.infoText}>{request.location.address}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Icon name="navigation" type="feather" size={16} color="#64748B" />
+              <Text style={styles.infoText}>{request.distance ? `${request.distance.toFixed(1)} km` : 'Calculando...'}</Text>
+            </View>
+          </View>
         </View>
-      </View>
+      </Animated.View>
     </Overlay>
   );
 };
@@ -347,39 +423,75 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   overlay: {
-    width: '90%',
-    borderRadius: 12,
     padding: 0,
+    borderRadius: 16,
     backgroundColor: 'white',
+    overflow: 'hidden',
   },
   notificationContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+  },
+  priorityBar: {
+    width: 4,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+  },
+  notificationContent: {
+    flex: 1,
     padding: 16,
   },
   notificationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   notificationTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   notificationTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#1E293B',
-    marginLeft: 8,
-  },
-  notificationContent: {
-    marginBottom: 16,
-  },
-  notificationText: {
-    fontSize: 16,
-    color: '#475569',
-    marginBottom: 8,
   },
   closeButton: {
     padding: 4,
+  },
+  emergencyTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  emergencyType: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  priorityBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  priorityText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  infoContainer: {
+    gap: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#475569',
+    flex: 1,
   },
 }); 
