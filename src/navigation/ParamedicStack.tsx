@@ -5,7 +5,7 @@ import { EmergencyDetailsScreen } from '../screens/paramedic/EmergencyDetailsScr
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { SerializedEmergencyRequest } from '../types/emergency';
 
-export type ParamedicStackParamList = {
+export type RootStackParamList = {
     Login: undefined;
     ParamedicHome: undefined;
     EmergencyDetails: {
@@ -13,14 +13,13 @@ export type ParamedicStackParamList = {
     };
 };
 
-const Stack = createNativeStackNavigator<ParamedicStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const ParamedicStack = () => {
     return (
         <Stack.Navigator
             screenOptions={{
                 headerShown: true,
-                headerBackTitle: 'Volver',
                 headerStyle: {
                     backgroundColor: '#FFFFFF',
                 },

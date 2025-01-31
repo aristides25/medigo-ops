@@ -8,11 +8,11 @@ import { MOCK_EMERGENCY_REQUESTS } from '../../constants/mockData';
 import { EmergencyRequest } from '../../types/emergency';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ParamedicStackParamList } from '../../navigation/ParamedicStack';
+import { RootStackParamList } from '../../navigation/ParamedicStack';
 import { serializeDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 
-type NavigationProp = NativeStackNavigationProp<ParamedicStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface EmergencyNotificationProps {
   request: EmergencyRequest | null;
@@ -135,6 +135,7 @@ export const ParamedicHomeScreen = () => {
 
   const handleLogout = () => {
     logout();
+    navigation.navigate('Login');
   };
 
   const handleCloseNotification = () => {
