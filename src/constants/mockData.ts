@@ -7,6 +7,13 @@ export const INITIAL_LOCATION: Location = {
     address: "Ciudad de México, CDMX"
 };
 
+// Función auxiliar para crear fechas serializadas
+const createMockDate = (minutesAgo: number = 0): string => {
+    const date = new Date();
+    date.setMinutes(date.getMinutes() - minutesAgo);
+    return date.toISOString();
+};
+
 // Solicitudes de emergencia mock
 export const MOCK_EMERGENCY_REQUESTS: EmergencyRequest[] = [
     {
@@ -39,15 +46,15 @@ export const MOCK_EMERGENCY_REQUESTS: EmergencyRequest[] = [
             }
         },
         description: "Dolor en el pecho y dificultad para respirar",
-        createdAt: new Date(),
+        createdAt: createMockDate(),
         distance: 1.5,
         serviceDetails: {
-            startTime: new Date(),
+            startTime: createMockDate(),
             notes: [],
             stateHistory: [
                 {
                     state: 'PENDING',
-                    timestamp: new Date(),
+                    timestamp: createMockDate(),
                     notes: "Solicitud recibida"
                 }
             ]
@@ -83,15 +90,15 @@ export const MOCK_EMERGENCY_REQUESTS: EmergencyRequest[] = [
             }
         },
         description: "Caída desde escalera, posible fractura",
-        createdAt: new Date(Date.now() - 1000 * 60 * 30),
+        createdAt: createMockDate(30),
         distance: 2.8,
         serviceDetails: {
-            startTime: new Date(Date.now() - 1000 * 60 * 30),
+            startTime: createMockDate(30),
             notes: [],
             stateHistory: [
                 {
                     state: 'PENDING',
-                    timestamp: new Date(Date.now() - 1000 * 60 * 30),
+                    timestamp: createMockDate(30),
                     notes: "Solicitud recibida"
                 }
             ]
@@ -127,15 +134,15 @@ export const MOCK_EMERGENCY_REQUESTS: EmergencyRequest[] = [
             }
         },
         description: "Crisis asmática severa",
-        createdAt: new Date(Date.now() - 1000 * 60 * 20),
+        createdAt: createMockDate(20),
         distance: 0.8,
         serviceDetails: {
-            startTime: new Date(Date.now() - 1000 * 60 * 20),
+            startTime: createMockDate(20),
             notes: [],
             stateHistory: [
                 {
                     state: 'PENDING',
-                    timestamp: new Date(Date.now() - 1000 * 60 * 20),
+                    timestamp: createMockDate(20),
                     notes: "Solicitud recibida"
                 }
             ]

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
-import { Text, Icon } from '@rneui/themed';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, Linking, Alert, TextInput, ScrollView } from 'react-native';
+import { Text, Icon, Button, Overlay } from '@rneui/themed';
 import { EmergencyRequest, EmergencyStatus } from '../types/emergency';
 
 interface ActiveEmergencyCardProps {
@@ -8,6 +8,7 @@ interface ActiveEmergencyCardProps {
     onComplete?: () => void;
     onUpdateStatus?: () => void;
     onViewDetails?: () => void;
+    onAddNote?: (note: string) => void;
 }
 
 const getStatusText = (status: EmergencyStatus) => {
@@ -16,14 +17,14 @@ const getStatusText = (status: EmergencyStatus) => {
             return 'En Camino';
         case 'IN_PROGRESS':
             return 'Llegando';
+        case 'ARRIVING':
+            return 'Muy Cerca';
         case 'ON_SITE':
             return 'En Sitio';
         case 'COMPLETED':
             return 'Completado';
         case 'CANCELLED':
             return 'Cancelado';
-        case 'PENDING':
-            return 'Pendiente';
         default:
             return 'Activo';
     }
@@ -32,8 +33,9 @@ const getStatusText = (status: EmergencyStatus) => {
 const getUpdateButtonText = (status: EmergencyStatus) => {
     switch (status) {
         case 'ACTIVE':
-            return 'Marcar Llegando';
+            return 'Marcar En Camino';
         case 'IN_PROGRESS':
+        case 'ARRIVING':
             return 'Marcar En Sitio';
         case 'ON_SITE':
             return 'Completar Servicio';
@@ -44,50 +46,44 @@ const getUpdateButtonText = (status: EmergencyStatus) => {
 
 export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
     request,
-    onComplete,
     onUpdateStatus,
     onViewDetails
 }) => {
-    const [elapsedTime, setElapsedTime] = useState('00:00');
+    const [isViewingNotes, setIsViewingNotes] = useState(false);
 
-    useEffect(() => {
-        const updateElapsedTime = () => {
-            const now = new Date();
-            const created = new Date(request.createdAt);
-            const diff = now.getTime() - created.getTime();
-            
-            const minutes = Math.floor(diff / 60000);
-            const seconds = Math.floor((diff % 60000) / 1000);
-            
-            setElapsedTime(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-        };
+    const handleCallPatient = () => {
+        if (request.patientInfo.phone) {
+            Linking.openURL(`tel:${request.patientInfo.phone}`);
+        } else {
+            Alert.alert('Error', 'No hay número de teléfono disponible');
+        }
+    };
 
-        // Actualizar inmediatamente
-        updateElapsedTime();
+    const handleCallEmergencyContact = () => {
+        if (request.patientInfo.emergencyContact?.phone) {
+            Linking.openURL(`tel:${request.patientInfo.emergencyContact.phone}`);
+        } else {
+            Alert.alert('Error', 'No hay número de contacto de emergencia disponible');
+        }
+    };
 
-        // Actualizar cada segundo
-        const interval = setInterval(updateElapsedTime, 1000);
-
-        // Limpiar el intervalo cuando el componente se desmonte
-        return () => clearInterval(interval);
-    }, [request.createdAt]);
-
-    const handleOpenMaps = () => {
+    const handleOpenNavigation = () => {
         const { latitude, longitude } = request.location;
-        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-        const wazeUrl = `https://waze.com/ul?ll=${latitude},${longitude}&navigate=yes`;
-
         Alert.alert(
-            'Navegar al Paciente',
+            'Navegación',
             '¿Qué aplicación deseas usar?',
             [
                 {
                     text: 'Google Maps',
-                    onPress: () => Linking.openURL(googleMapsUrl)
+                    onPress: () => {
+                        Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`);
+                    }
                 },
                 {
                     text: 'Waze',
-                    onPress: () => Linking.openURL(wazeUrl)
+                    onPress: () => {
+                        Linking.openURL(`https://waze.com/ul?ll=${latitude},${longitude}&navigate=yes`);
+                    }
                 },
                 {
                     text: 'Cancelar',
@@ -97,103 +93,113 @@ export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
         );
     };
 
-    const handleCall = () => {
-        const phoneNumber = request.patientInfo.phone;
-        if (phoneNumber) {
-            Linking.openURL(`tel:${phoneNumber}`);
-        }
-    };
-
     return (
         <View style={styles.card}>
-            {/* Header con estado */}
             <View style={styles.header}>
-                <TouchableOpacity 
-                    style={styles.statusContainer}
-                    onPress={onViewDetails}
-                >
-                    <Icon
-                        name="ambulance"
-                        type="font-awesome-5"
-                        size={20}
-                        color="#1E293B"
-                    />
-                    <Text style={styles.statusText}>
-                        {getStatusText(request.status)}
-                    </Text>
-                    <Icon
-                        name="chevron-right"
-                        type="font-awesome-5"
-                        size={16}
-                        color="#64748B"
-                    />
+                <View style={styles.statusContainer}>
+                    <Text style={styles.statusText}>{getStatusText(request.status)}</Text>
+                </View>
+                <TouchableOpacity onPress={onViewDetails}>
+                    <Icon name="chevron-right" type="feather" size={24} color="#64748B" />
                 </TouchableOpacity>
-                <Text style={styles.timeElapsed}>{elapsedTime}</Text>
             </View>
 
-            {/* Información del paciente */}
             <View style={styles.patientInfo}>
-                <Text style={styles.label}>Paciente:</Text>
+                <Text style={styles.label}>Paciente</Text>
                 <Text style={styles.value}>{request.patientInfo.name}</Text>
-                {request.patientInfo.age && (
-                    <Text style={styles.value}>{request.patientInfo.age} años</Text>
+                {request.serviceDetails?.notes && request.serviceDetails.notes.length > 0 && (
+                    <TouchableOpacity 
+                        style={styles.notesIndicator}
+                        onPress={() => setIsViewingNotes(true)}
+                    >
+                        <Icon name="file-text" type="feather" size={16} color="#3B82F6" />
+                        <Text style={styles.notesText}>
+                            {request.serviceDetails.notes.length} nota{request.serviceDetails.notes.length !== 1 ? 's' : ''} del paciente
+                        </Text>
+                    </TouchableOpacity>
                 )}
             </View>
 
-            {/* Ubicación */}
             <View style={styles.locationContainer}>
-                <Icon
-                    name="map-marker-alt"
-                    type="font-awesome-5"
-                    size={16}
-                    color="#64748B"
-                />
+                <Icon name="map-pin" type="feather" size={16} color="#64748B" />
                 <Text style={styles.address}>{request.location.address}</Text>
             </View>
 
-            {/* Botones de acción */}
-            <View style={styles.actions}>
+            <View style={styles.actionsContainer}>
+                {/* Botones de llamada */}
+                <View style={styles.callButtons}>
+                    <TouchableOpacity 
+                        style={[styles.button, styles.callButton]}
+                        onPress={handleCallPatient}
+                    >
+                        <Icon name="phone" type="feather" size={20} color="#FFFFFF" />
+                        <Text style={styles.buttonText}>Llamar al Paciente</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        style={[styles.button, styles.emergencyContactButton]}
+                        onPress={handleCallEmergencyContact}
+                    >
+                        <Icon name="phone-forwarded" type="feather" size={20} color="#FFFFFF" />
+                        <Text style={styles.buttonText}>Contacto de Emergencia</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Botón de navegación */}
                 <TouchableOpacity 
-                    style={[styles.button, styles.navigationButton]} 
-                    onPress={handleOpenMaps}
+                    style={[styles.button, styles.navigationButton]}
+                    onPress={handleOpenNavigation}
                 >
-                    <Icon
-                        name="directions"
-                        type="font-awesome-5"
-                        size={16}
-                        color="#FFFFFF"
-                    />
+                    <Icon name="navigation" type="feather" size={20} color="#FFFFFF" />
                     <Text style={styles.buttonText}>Navegar</Text>
                 </TouchableOpacity>
 
+                {/* Botón de notas */}
                 <TouchableOpacity 
-                    style={[styles.button, styles.callButton]} 
-                    onPress={handleCall}
+                    style={[styles.button, styles.noteButton]}
+                    onPress={() => setIsViewingNotes(true)}
                 >
-                    <Icon
-                        name="phone"
-                        type="font-awesome-5"
-                        size={16}
-                        color="#FFFFFF"
-                    />
-                    <Text style={styles.buttonText}>Llamar</Text>
+                    <Icon name="file-text" type="feather" size={20} color="#1E293B" />
+                    <Text style={[styles.buttonText, { color: '#1E293B' }]}>Ver Notas</Text>
                 </TouchableOpacity>
 
+                {/* Botón de actualizar estado */}
                 <TouchableOpacity 
-                    style={[styles.button, styles.updateButton]} 
+                    style={[styles.button, styles.updateButton]}
                     onPress={onUpdateStatus}
                 >
-                    <Icon
-                        name="clock"
-                        type="font-awesome-5"
-                        size={16}
-                        color="#FFFFFF"
-                    />
-                    <Text style={styles.buttonText}>
-                        {getUpdateButtonText(request.status)}
-                    </Text>
+                    <Icon name="check-circle" type="feather" size={20} color="#FFFFFF" />
+                    <Text style={styles.buttonText}>{getUpdateButtonText(request.status)}</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Modal para ver notas */}
+            <Overlay
+                isVisible={isViewingNotes}
+                onBackdropPress={() => setIsViewingNotes(false)}
+                overlayStyle={styles.overlay}
+            >
+                <View style={styles.noteContainer}>
+                    <Text style={styles.noteTitle}>Notas del Paciente</Text>
+                    <ScrollView style={styles.notesScrollView}>
+                        {request.serviceDetails?.notes && request.serviceDetails.notes.length > 0 ? (
+                            request.serviceDetails.notes.map((note, index) => (
+                                <View key={index} style={styles.noteItem}>
+                                    <Text style={styles.noteText}>{note}</Text>
+                                </View>
+                            ))
+                        ) : (
+                            <View style={styles.noteItem}>
+                                <Text style={styles.noteText}>No hay notas disponibles</Text>
+                            </View>
+                        )}
+                    </ScrollView>
+                    <Button
+                        title="Cerrar"
+                        onPress={() => setIsViewingNotes(false)}
+                    />
+                </View>
+            </Overlay>
         </View>
     );
 };
@@ -229,11 +235,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#1E293B',
     },
-    timeElapsed: {
-        fontSize: 14,
-        color: '#64748B',
-        fontWeight: '500',
-    },
     patientInfo: {
         marginBottom: 12,
     },
@@ -258,9 +259,11 @@ const styles = StyleSheet.create({
         color: '#64748B',
         flex: 1,
     },
-    actions: {
+    actionsContainer: {
+        gap: 12,
+    },
+    callButtons: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         gap: 8,
     },
     button: {
@@ -272,11 +275,12 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderRadius: 8,
     },
-    navigationButton: {
-        backgroundColor: '#3B82F6',
-    },
     callButton: {
         backgroundColor: '#22C55E',
+        flex: 1,
+    },
+    navigationButton: {
+        backgroundColor: '#3B82F6',
     },
     updateButton: {
         backgroundColor: '#6366F1',
@@ -286,4 +290,52 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
+    overlay: {
+        width: '90%',
+        borderRadius: 12,
+        padding: 0,
+    },
+    noteContainer: {
+        padding: 16,
+    },
+    noteTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#1E293B',
+        marginBottom: 16,
+    },
+    notesIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: 8,
+    },
+    notesText: {
+        fontSize: 14,
+        color: '#3B82F6',
+    },
+    emergencyContactButton: {
+        backgroundColor: '#DC2626',
+        flex: 1,
+    },
+    noteButton: {
+        backgroundColor: '#F1F5F9',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    noteItem: {
+        backgroundColor: '#F8FAFC',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 8,
+    },
+    noteText: {
+        fontSize: 14,
+        color: '#475569',
+        lineHeight: 20,
+    },
+    notesScrollView: {
+        maxHeight: 300,
+        marginBottom: 16,
+    }
 }); 

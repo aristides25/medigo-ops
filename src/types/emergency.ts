@@ -38,13 +38,13 @@ export interface PatientInfo {
 
 export interface StateHistoryEntry {
     state: EmergencyStatus;
-    timestamp: Date;
+    timestamp: string;
     notes?: string;
 }
 
 export interface ServiceDetails {
-    startTime: Date;
-    endTime?: Date;
+    startTime: string;
+    endTime?: string;
     duration?: number;
     notes: string[];
     stateHistory: StateHistoryEntry[];
@@ -58,16 +58,10 @@ export interface EmergencyRequest {
     location: Location;
     patientInfo: PatientInfo;
     description: string;
-    createdAt: Date;
-    acceptedAt?: Date;
-    completedAt?: Date;
-    distance?: number;
-    notes?: string[];
-    serviceDetails?: ServiceDetails;
-}
-
-export interface SerializedEmergencyRequest extends Omit<EmergencyRequest, 'createdAt' | 'acceptedAt' | 'completedAt'> {
     createdAt: string;
     acceptedAt?: string;
     completedAt?: string;
+    distance?: number;
+    notes?: string[];
+    serviceDetails?: ServiceDetails;
 } 

@@ -242,7 +242,7 @@ export const ParamedicHomeScreen = () => {
     const updatedRequest = {
       ...request,
       status: 'ACTIVE' as const,
-      acceptedAt: new Date()
+      acceptedAt: new Date().toISOString()
     };
     setActiveRequest(updatedRequest);
     setPendingRequests(prev => prev.filter(r => r.id !== request.id));
@@ -253,6 +253,39 @@ export const ParamedicHomeScreen = () => {
     setPendingRequests(prev => prev.filter(r => r.id !== requestId));
   };
 
+  // Función para simular el cálculo de distancia (esto se reemplazará con geolocalización real)
+  const calculateEstimatedTime = (distance: number): number => {
+    // Asumimos una velocidad promedio de 30 km/h en ciudad
+    const speedKmH = 30;
+    // Convertimos la distancia a kilómetros y calculamos el tiempo en minutos
+    return (distance * 60) / speedKmH;
+  };
+
+  // Efecto para monitorear la distancia y actualizar el estado
+  useEffect(() => {
+    if (activeRequest?.status === 'IN_PROGRESS' && activeRequest.distance) {
+      const estimatedMinutes = calculateEstimatedTime(activeRequest.distance);
+      
+      if (estimatedMinutes <= 3 && activeRequest.status !== 'ARRIVING') {
+        setActiveRequest(prev => ({
+          ...prev!,
+          status: 'ARRIVING',
+          serviceDetails: {
+            ...prev!.serviceDetails!,
+            stateHistory: [
+              ...prev!.serviceDetails!.stateHistory,
+              {
+                state: 'ARRIVING',
+                timestamp: new Date().toISOString(),
+                notes: 'Cambio automático: a 3 minutos de distancia'
+              }
+            ]
+          }
+        }));
+      }
+    }
+  }, [activeRequest?.distance, activeRequest?.status]);
+
   const handleUpdateStatus = () => {
     if (!activeRequest) return;
 
@@ -261,6 +294,7 @@ export const ParamedicHomeScreen = () => {
         case 'ACTIVE':
           return 'IN_PROGRESS';
         case 'IN_PROGRESS':
+        case 'ARRIVING':
           return 'ON_SITE';
         case 'ON_SITE':
           return 'COMPLETED';
@@ -272,7 +306,18 @@ export const ParamedicHomeScreen = () => {
     setActiveRequest({
       ...activeRequest,
       status: nextStatus,
-      ...(nextStatus === 'COMPLETED' ? { completedAt: new Date() } : {})
+      ...(nextStatus === 'COMPLETED' ? { completedAt: new Date().toISOString() } : {}),
+      serviceDetails: {
+        ...activeRequest.serviceDetails!,
+        stateHistory: [
+          ...activeRequest.serviceDetails!.stateHistory,
+          {
+            state: nextStatus,
+            timestamp: new Date().toISOString(),
+            notes: nextStatus === 'COMPLETED' ? 'Servicio completado' : 'Actualización manual de estado'
+          }
+        ]
+      }
     });
 
     if (nextStatus === 'COMPLETED') {
@@ -282,13 +327,7 @@ export const ParamedicHomeScreen = () => {
   };
 
   const handleViewDetails = (request: EmergencyRequest) => {
-    const serializedRequest = {
-      ...request,
-      createdAt: serializeDate(request.createdAt),
-      acceptedAt: request.acceptedAt ? serializeDate(request.acceptedAt) : undefined,
-      completedAt: request.completedAt ? serializeDate(request.completedAt) : undefined,
-    };
-    navigation.navigate('EmergencyDetails', { request: serializedRequest });
+    navigation.navigate('EmergencyDetails', { request });
   };
 
   const handleLogout = () => {
@@ -309,6 +348,44 @@ export const ParamedicHomeScreen = () => {
       setNotificationVisible(true);
     }
   }, []); // Solo se ejecuta una vez al montar el componente
+
+  // Simulación de actualización de distancia (esto se reemplazará con geolocalización real)
+  useEffect(() => {
+    if (activeRequest?.status === 'IN_PROGRESS') {
+      const interval = setInterval(() => {
+        setActiveRequest(prev => {
+          if (!prev) return null;
+          const newDistance = Math.max(0, (prev.distance || 0) - 0.1);
+          return {
+            ...prev,
+            distance: newDistance
+          };
+        });
+      }, 3000); // Actualiza cada 3 segundos
+
+      return () => clearInterval(interval);
+    }
+  }, [activeRequest?.status]);
+
+  const handleAddNote = (note: string) => {
+    if (!activeRequest) return;
+
+    setActiveRequest({
+        ...activeRequest,
+        serviceDetails: {
+            ...activeRequest.serviceDetails!,
+            notes: [...activeRequest.serviceDetails!.notes, note],
+            stateHistory: [
+                ...activeRequest.serviceDetails!.stateHistory,
+                {
+                    state: activeRequest.status,
+                    timestamp: new Date().toISOString(),
+                    notes: note
+                }
+            ]
+        }
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -360,6 +437,7 @@ export const ParamedicHomeScreen = () => {
                 request={activeRequest}
                 onUpdateStatus={handleUpdateStatus}
                 onViewDetails={() => handleViewDetails(activeRequest)}
+                onAddNote={handleAddNote}
               />
             </View>
           )}
