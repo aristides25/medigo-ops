@@ -118,7 +118,7 @@ export const EmergencyRequestCard: React.FC<EmergencyRequestCardProps> = ({
                             size={16}
                             color="#FFFFFF"
                         />
-                        <Text style={styles.buttonText}>Aceptar</Text>
+                        <Text style={[styles.buttonText, styles.acceptButtonText]}>Aceptar</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
@@ -129,9 +129,9 @@ export const EmergencyRequestCard: React.FC<EmergencyRequestCardProps> = ({
                             name="times"
                             type="font-awesome-5"
                             size={16}
-                            color="#FFFFFF"
+                            color="#DC2626"
                         />
-                        <Text style={styles.buttonText}>Rechazar</Text>
+                        <Text style={[styles.buttonText, styles.rejectButtonText]}>Rechazar</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -216,25 +216,36 @@ const styles = StyleSheet.create({
     },
     actions: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         gap: 8,
+        marginTop: 16,
     },
     button: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 8,
-        minWidth: 100,
+        flex: 1,
+        flexDirection: 'row',
         alignItems: 'center',
-    },
-    rejectButton: {
-        backgroundColor: '#FEE2E2',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        gap: 8,
     },
     acceptButton: {
         backgroundColor: '#22C55E',
     },
+    rejectButton: {
+        backgroundColor: '#FEE2E2',
+        borderWidth: 1,
+        borderColor: '#DC2626',
+    },
     buttonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#EF4444',
+    },
+    acceptButtonText: {
+        color: '#FFFFFF',
+    },
+    rejectButtonText: {
+        color: '#DC2626',
     },
 }); 

@@ -18,18 +18,50 @@ interface EmergencyNotificationProps {
   request: EmergencyRequest | null;
   visible: boolean;
   onClose: () => void;
+  onAccept: (request: EmergencyRequest) => void;
+  onReject: (requestId: string) => void;
 }
 
 const EmergencyNotification: React.FC<EmergencyNotificationProps> = ({ 
   request, 
   visible, 
-  onClose 
+  onClose,
+  onAccept,
+  onReject
 }) => {
   const slideAnim = React.useRef(new Animated.Value(-300)).current;
+  const shakeAnim = React.useRef(new Animated.Value(0)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const { width } = Dimensions.get('window');
 
-  React.useEffect(() => {
+  const startShakeAnimation = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: 10,
+        duration: 100,
+        useNativeDriver: true
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -10,
+        duration: 100,
+        useNativeDriver: true
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 10,
+        duration: 100,
+        useNativeDriver: true
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 100,
+        useNativeDriver: true
+      })
+    ]).start(() => {
+      setTimeout(startShakeAnimation, 2000);
+    });
+  };
+
+  useEffect(() => {
     if (visible) {
       Animated.parallel([
         Animated.spring(slideAnim, {
@@ -43,7 +75,9 @@ const EmergencyNotification: React.FC<EmergencyNotificationProps> = ({
           duration: 300,
           useNativeDriver: true
         })
-      ]).start();
+      ]).start(() => {
+        startShakeAnimation();
+      });
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
@@ -75,49 +109,57 @@ const EmergencyNotification: React.FC<EmergencyNotificationProps> = ({
     }
   };
 
+  const getEmergencyIcon = () => {
+    switch (request.type) {
+      case 'CARDIAC':
+        return 'heartbeat';
+      case 'RESPIRATORY':
+        return 'lungs';
+      case 'TRAUMA':
+        return 'hospital-user';
+      default:
+        return 'first-aid';
+    }
+  };
+
   return (
     <Overlay
       isVisible={visible}
       onBackdropPress={onClose}
-      overlayStyle={[styles.overlay, { width: width - 32 }]}
+      overlayStyle={styles.overlay}
       backdropStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-      animationType="fade"
     >
       <Animated.View
         style={[
           styles.notificationContainer,
           {
-            transform: [{ translateY: slideAnim }],
+            width: width - 32,
+            transform: [
+              { translateY: slideAnim },
+              { translateX: shakeAnim }
+            ],
             opacity: fadeAnim
           }
         ]}
       >
-        {/* Barra de prioridad */}
-        <View style={[styles.priorityBar, { backgroundColor: getPriorityColor() }]} />
-
         <View style={styles.notificationContent}>
           {/* Header */}
           <View style={styles.notificationHeader}>
             <View style={styles.notificationTitleContainer}>
               <Icon
-                name="alert-circle"
-                type="feather"
+                name={getEmergencyIcon()}
+                type="font-awesome-5"
                 size={24}
                 color={getPriorityColor()}
               />
               <Text style={styles.notificationTitle}>¡Nueva Emergencia!</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Icon
-                name="x"
-                type="feather"
-                size={20}
-                color="#94A3B8"
-              />
+              <Icon name="x" type="feather" size={20} color="#94A3B8" />
             </TouchableOpacity>
           </View>
 
-          {/* Tipo de Emergencia */}
+          {/* Tipo y Prioridad */}
           <View style={styles.emergencyTypeContainer}>
             <Text style={styles.emergencyType}>{request.type}</Text>
             <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor() }]}>
@@ -125,20 +167,46 @@ const EmergencyNotification: React.FC<EmergencyNotificationProps> = ({
             </View>
           </View>
 
-          {/* Información */}
+          {/* Descripción */}
+          <Text style={styles.description}>{request.description}</Text>
+
+          {/* Info */}
           <View style={styles.infoContainer}>
-            <View style={styles.infoRow}>
-              <Icon name="user" type="feather" size={16} color="#64748B" />
-              <Text style={styles.infoText}>{request.patientInfo.name}</Text>
-            </View>
             <View style={styles.infoRow}>
               <Icon name="map-pin" type="feather" size={16} color="#64748B" />
               <Text style={styles.infoText}>{request.location.address}</Text>
             </View>
             <View style={styles.infoRow}>
               <Icon name="navigation" type="feather" size={16} color="#64748B" />
-              <Text style={styles.infoText}>{request.distance ? `${request.distance.toFixed(1)} km` : 'Calculando...'}</Text>
+              <Text style={styles.infoText}>
+                {request.distance ? `${request.distance.toFixed(1)} km` : 'Calculando...'}
+              </Text>
             </View>
+          </View>
+
+          {/* Botones */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.acceptButton]}
+              onPress={() => {
+                onAccept(request);
+                onClose();
+              }}
+            >
+              <Icon name="check" type="feather" size={20} color="#FFFFFF" />
+              <Text style={styles.acceptButtonText}>Aceptar</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.rejectButton]}
+              onPress={() => {
+                onReject(request.id);
+                onClose();
+              }}
+            >
+              <Icon name="x" type="feather" size={20} color="#DC2626" />
+              <Text style={styles.rejectButtonText}>Rechazar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Animated.View>
@@ -151,10 +219,9 @@ export const ParamedicHomeScreen = () => {
   const { logout } = useAuth();
   const [isAvailable, setIsAvailable] = useState(true);
   const [activeRequest, setActiveRequest] = useState<EmergencyRequest | null>(null);
-  const [pendingRequests, setPendingRequests] = useState(MOCK_EMERGENCY_REQUESTS);
+  const [pendingRequests, setPendingRequests] = useState<EmergencyRequest[]>(MOCK_EMERGENCY_REQUESTS);
   const [newEmergency, setNewEmergency] = useState<EmergencyRequest | null>(null);
   const [notificationVisible, setNotificationVisible] = useState(false);
-  const [shownNotifications, setShownNotifications] = useState<Set<string>>(new Set());
 
   const handleAcceptRequest = (request: EmergencyRequest) => {
     const updatedRequest = {
@@ -215,27 +282,18 @@ export const ParamedicHomeScreen = () => {
   };
 
   const handleCloseNotification = () => {
-    if (newEmergency) {
-      setShownNotifications(prev => new Set([...prev, newEmergency.id]));
-    }
     setNotificationVisible(false);
     setNewEmergency(null);
   };
 
+  // Efecto para mostrar la notificación inicial
   useEffect(() => {
-    if (isAvailable && !activeRequest && pendingRequests.length > 0 && !notificationVisible && !newEmergency) {
-      const nextEmergency = pendingRequests.find(request => !shownNotifications.has(request.id));
-      
-      if (nextEmergency) {
-        setNewEmergency(nextEmergency);
-        setNotificationVisible(true);
-      }
+    const cardiacEmergency = pendingRequests.find(request => request.type === 'CARDIAC');
+    if (cardiacEmergency && !notificationVisible) {
+      setNewEmergency(cardiacEmergency);
+      setNotificationVisible(true);
     }
-  }, [isAvailable, activeRequest, pendingRequests, notificationVisible, newEmergency, shownNotifications]);
-
-  useEffect(() => {
-    setShownNotifications(new Set());
-  }, [pendingRequests.length]);
+  }, []); // Solo se ejecuta una vez al montar el componente
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -316,11 +374,15 @@ export const ParamedicHomeScreen = () => {
           )}
         </ScrollView>
 
-        <EmergencyNotification
-          request={newEmergency}
-          visible={notificationVisible}
-          onClose={handleCloseNotification}
-        />
+        {newEmergency && (
+          <EmergencyNotification
+            request={newEmergency}
+            visible={notificationVisible}
+            onClose={handleCloseNotification}
+            onAccept={handleAcceptRequest}
+            onReject={handleRejectRequest}
+          />
+        )}
       </View>
     </SafeAreaView>
   );
@@ -424,28 +486,31 @@ const styles = StyleSheet.create({
   },
   overlay: {
     padding: 0,
-    borderRadius: 16,
-    backgroundColor: 'white',
-    overflow: 'hidden',
+    margin: 0,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   notificationContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
-  },
-  priorityBar: {
-    width: 4,
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   notificationContent: {
-    flex: 1,
-    padding: 16,
+    padding: 20,
   },
   notificationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   notificationTitleContainer: {
     flexDirection: 'row',
@@ -477,12 +542,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   priorityText: {
-    color: 'white',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
   },
+  description: {
+    fontSize: 16,
+    color: '#475569',
+    marginBottom: 16,
+  },
   infoContainer: {
     gap: 12,
+    marginBottom: 24,
   },
   infoRow: {
     flexDirection: 'row',
@@ -493,5 +564,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#475569',
     flex: 1,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  acceptButton: {
+    backgroundColor: '#22C55E',
+  },
+  rejectButton: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  acceptButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rejectButtonText: {
+    color: '#DC2626',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

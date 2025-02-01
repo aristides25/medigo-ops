@@ -46,7 +46,7 @@ export const MOCK_EMERGENCY_REQUESTS: EmergencyRequest[] = [
             phone: "5555555556"
         },
         description: "Caída desde escalera, posible fractura",
-        createdAt: new Date(Date.now() - 1000 * 60 * 15), // 15 minutos atrás
+        createdAt: new Date(Date.now() - 1000 * 60 * 30),
         distance: 2.8
     },
     {
@@ -66,7 +66,7 @@ export const MOCK_EMERGENCY_REQUESTS: EmergencyRequest[] = [
             phone: "5555555557"
         },
         description: "Crisis asmática severa",
-        createdAt: new Date(Date.now() - 1000 * 60 * 5), // 5 minutos atrás
+        createdAt: new Date(Date.now() - 1000 * 60 * 20),
         distance: 0.8
     }
 ]; 
