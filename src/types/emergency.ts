@@ -3,6 +3,7 @@ export type EmergencyStatus =
     | 'PENDING'
     | 'ACTIVE'
     | 'IN_PROGRESS'
+    | 'ARRIVING'
     | 'ON_SITE'
     | 'COMPLETED'
     | 'CANCELLED';
@@ -13,6 +14,9 @@ export interface Location {
     latitude: number;
     longitude: number;
     address?: string;
+    reference?: string;
+    buildingDetails?: string;
+    accessNotes?: string;
 }
 
 export interface PatientInfo {
@@ -24,11 +28,26 @@ export interface PatientInfo {
     medicalConditions?: string[];
     allergies?: string[];
     medications?: string[];
+    preferredLanguage?: string;
     emergencyContact?: {
         name: string;
         relationship: string;
         phone: string;
     };
+}
+
+export interface StateHistoryEntry {
+    state: EmergencyStatus;
+    timestamp: Date;
+    notes?: string;
+}
+
+export interface ServiceDetails {
+    startTime: Date;
+    endTime?: Date;
+    duration?: number;
+    notes: string[];
+    stateHistory: StateHistoryEntry[];
 }
 
 export interface EmergencyRequest {
@@ -44,6 +63,7 @@ export interface EmergencyRequest {
     completedAt?: Date;
     distance?: number;
     notes?: string[];
+    serviceDetails?: ServiceDetails;
 }
 
 export interface SerializedEmergencyRequest extends Omit<EmergencyRequest, 'createdAt' | 'acceptedAt' | 'completedAt'> {

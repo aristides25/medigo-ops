@@ -37,27 +37,42 @@ const EmergencyNotification: React.FC<EmergencyNotificationProps> = ({
   const startShakeAnimation = () => {
     Animated.sequence([
       Animated.timing(shakeAnim, {
+        toValue: 15,
+        duration: 80,
+        useNativeDriver: true
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -15,
+        duration: 80,
+        useNativeDriver: true
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 15,
+        duration: 80,
+        useNativeDriver: true
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -15,
+        duration: 80,
+        useNativeDriver: true
+      }),
+      Animated.timing(shakeAnim, {
         toValue: 10,
-        duration: 100,
+        duration: 80,
         useNativeDriver: true
       }),
       Animated.timing(shakeAnim, {
         toValue: -10,
-        duration: 100,
-        useNativeDriver: true
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 10,
-        duration: 100,
+        duration: 80,
         useNativeDriver: true
       }),
       Animated.timing(shakeAnim, {
         toValue: 0,
-        duration: 100,
+        duration: 80,
         useNativeDriver: true
       })
     ]).start(() => {
-      setTimeout(startShakeAnimation, 2000);
+      setTimeout(startShakeAnimation, 1500);
     });
   };
 

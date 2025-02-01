@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { Button, Input, Text, useTheme } from '@rneui/themed';
-import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
+import { RootStackParamList } from '../../navigation/ParamedicStack';
 
 const TEST_CREDENTIALS = [
     { email: 'juan.perez@medigo.com', password: '123456' },
     { email: 'maria.rodriguez@medigo.com', password: '123456' }
 ];
 
-export const LoginScreen = () => {
+type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+
+type Props = {
+    navigation: LoginScreenNavigationProp;
+};
+
+export const LoginScreen = ({ navigation }: Props) => {
     const { theme } = useTheme();
-    const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const { login, error: authError, isLoading } = useAuth();
     const [credentials, setCredentials] = useState({
         email: '',
@@ -27,9 +32,10 @@ export const LoginScreen = () => {
 
         try {
             await login(credentials);
-            navigation.replace('ParamedicHome');
-        } catch (err) {
-            // El error ya está manejado en el contexto
+            navigation.replace('ParamedicScreens');
+        } catch (error) {
+            console.error('Error al iniciar sesión:', error);
+            Alert.alert('Error', 'Credenciales inválidas');
         }
     };
 
@@ -47,10 +53,10 @@ export const LoginScreen = () => {
                         MediGo Ops
                     </Text>
                     <Text h4 style={styles.subtitle}>
-                        Portal de Paramédicos
+                        Centro de Operaciones
                     </Text>
                     <Text style={styles.description}>
-                        Acceso exclusivo para personal autorizado
+                        Sistema de gestión de emergencias médicas
                     </Text>
                 </View>
 

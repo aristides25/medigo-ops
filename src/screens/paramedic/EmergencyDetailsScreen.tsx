@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Icon } from '@rneui/themed';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { Text, Icon, Button } from '@rneui/themed';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { ParamedicStackParamList } from '../../navigation/ParamedicStack';
 import { EmergencyRequest } from '../../types/emergency';
@@ -17,116 +17,125 @@ export const EmergencyDetailsScreen = () => {
     const acceptedAt = request.acceptedAt ? deserializeDate(request.acceptedAt) : undefined;
     const completedAt = request.completedAt ? deserializeDate(request.completedAt) : undefined;
 
+    const handleCall = (phoneNumber: string) => {
+        Linking.openURL(`tel:${phoneNumber}`);
+    };
+
+    const renderInfoRow = (label: string, value: string | undefined) => {
+        if (!value) return null;
+        return (
+            <View style={styles.infoRow}>
+                <Text style={styles.label}>{label}:</Text>
+                <Text style={styles.value}>{value}</Text>
+            </View>
+        );
+    };
+
+    const renderArrayInfo = (label: string, items: string[] | undefined) => {
+        if (!items || items.length === 0) return null;
+        return (
+            <View style={styles.infoRow}>
+                <Text style={styles.label}>{label}:</Text>
+                <Text style={styles.value}>{items.join(', ')}</Text>
+            </View>
+        );
+    };
+
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-            {/* Tipo de Emergencia */}
+            {/* Tipo de Emergencia y Prioridad */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Tipo de Emergencia</Text>
-                <View style={styles.typeContainer}>
+                <Text style={styles.sectionTitle}>Emergencia {request.type}</Text>
+                <View style={styles.priorityContainer}>
                     <Icon
-                        name="ambulance"
+                        name={request.type === 'CARDIAC' ? 'heartbeat' : 
+                             request.type === 'RESPIRATORY' ? 'lungs' : 
+                             request.type === 'TRAUMA' ? 'hospital-user' : 'first-aid'}
                         type="font-awesome-5"
                         size={24}
-                        color="#1E293B"
+                        color="#DC2626"
                     />
-                    <Text style={styles.typeText}>{request.type}</Text>
+                    <View style={[styles.priorityBadge, { 
+                        backgroundColor: request.priority === 'HIGH' ? '#DC2626' : 
+                                       request.priority === 'MEDIUM' ? '#F59E0B' : '#10B981'
+                    }]}>
+                        <Text style={styles.priorityText}>{request.priority}</Text>
+                    </View>
                 </View>
+                <Text style={styles.description}>{request.description}</Text>
             </View>
 
             {/* Información del Paciente */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Información del Paciente</Text>
                 <View style={styles.infoContainer}>
-                    <View style={styles.infoRow}>
-                        <Text style={styles.label}>Nombre:</Text>
-                        <Text style={styles.value}>{request.patientInfo.name}</Text>
-                    </View>
-                    {request.patientInfo.age && (
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Edad:</Text>
-                            <Text style={styles.value}>{request.patientInfo.age} años</Text>
-                        </View>
-                    )}
-                    {request.patientInfo.gender && (
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Género:</Text>
-                            <Text style={styles.value}>{request.patientInfo.gender}</Text>
-                        </View>
-                    )}
+                    {renderInfoRow('Nombre', request.patientInfo.name)}
+                    {renderInfoRow('Edad', request.patientInfo.age?.toString())}
+                    {renderInfoRow('Género', request.patientInfo.gender)}
+                    {renderInfoRow('Tipo de Sangre', request.patientInfo.bloodType)}
+                    {renderInfoRow('Idioma', request.patientInfo.preferredLanguage)}
+                    {renderArrayInfo('Condiciones Médicas', request.patientInfo.medicalConditions)}
+                    {renderArrayInfo('Alergias', request.patientInfo.allergies)}
+                    {renderArrayInfo('Medicamentos', request.patientInfo.medications)}
+                    
                     {request.patientInfo.phone && (
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Teléfono:</Text>
-                            <Text style={styles.value}>{request.patientInfo.phone}</Text>
-                        </View>
-                    )}
-                    {request.patientInfo.bloodType && (
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Tipo de Sangre:</Text>
-                            <Text style={styles.value}>{request.patientInfo.bloodType}</Text>
-                        </View>
-                    )}
-                    {request.patientInfo.medicalConditions && (
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Condiciones Médicas:</Text>
-                            <Text style={styles.value}>{request.patientInfo.medicalConditions.join(', ')}</Text>
-                        </View>
-                    )}
-                    {request.patientInfo.allergies && (
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Alergias:</Text>
-                            <Text style={styles.value}>{request.patientInfo.allergies.join(', ')}</Text>
-                        </View>
-                    )}
-                    {request.patientInfo.medications && (
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Medicamentos:</Text>
-                            <Text style={styles.value}>{request.patientInfo.medications.join(', ')}</Text>
-                        </View>
+                        <TouchableOpacity 
+                            style={styles.phoneContainer}
+                            onPress={() => handleCall(request.patientInfo.phone!)}
+                        >
+                            <Icon name="phone" type="feather" size={20} color="#22C55E" />
+                            <Text style={styles.phoneText}>{request.patientInfo.phone}</Text>
+                        </TouchableOpacity>
                     )}
                 </View>
             </View>
+
+            {/* Contacto de Emergencia */}
+            {request.patientInfo.emergencyContact && (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Contacto de Emergencia</Text>
+                    <View style={styles.infoContainer}>
+                        {renderInfoRow('Nombre', request.patientInfo.emergencyContact.name)}
+                        {renderInfoRow('Relación', request.patientInfo.emergencyContact.relationship)}
+                        {request.patientInfo.emergencyContact.phone && (
+                            <TouchableOpacity 
+                                style={styles.phoneContainer}
+                                onPress={() => handleCall(request.patientInfo.emergencyContact!.phone)}
+                            >
+                                <Icon name="phone" type="feather" size={20} color="#22C55E" />
+                                <Text style={styles.phoneText}>
+                                    {request.patientInfo.emergencyContact.phone}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+            )}
 
             {/* Ubicación */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Ubicación</Text>
-                <View style={styles.locationContainer}>
-                    <Icon
-                        name="map-marker-alt"
-                        type="font-awesome-5"
-                        size={20}
-                        color="#64748B"
-                        style={styles.locationIcon}
-                    />
-                    <Text style={styles.address}>{request.location.address}</Text>
+                {/* Vista previa del mapa (placeholder) */}
+                <View style={styles.mapPreview}>
+                    <Icon name="map" type="feather" size={40} color="#94A3B8" />
+                    <Text style={styles.mapPlaceholderText}>Vista previa del mapa</Text>
                 </View>
-            </View>
-
-            {/* Detalles Adicionales */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Detalles</Text>
-                <Text style={styles.description}>{request.description}</Text>
+                <View style={styles.infoContainer}>
+                    {renderInfoRow('Dirección', request.location.address)}
+                    {renderInfoRow('Referencia', request.location.reference)}
+                    {renderInfoRow('Detalles del Edificio', request.location.buildingDetails)}
+                    {renderInfoRow('Notas de Acceso', request.location.accessNotes)}
+                    {renderInfoRow('Distancia', request.distance ? `${request.distance.toFixed(1)} km` : undefined)}
+                </View>
             </View>
 
             {/* Tiempos */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Tiempos</Text>
                 <View style={styles.infoContainer}>
-                    <View style={styles.infoRow}>
-                        <Text style={styles.label}>Creado:</Text>
-                        <Text style={styles.value}>{formatDate(createdAt)}</Text>
-                    </View>
-                    {acceptedAt && (
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Aceptado:</Text>
-                            <Text style={styles.value}>{formatDate(acceptedAt)}</Text>
-                        </View>
-                    )}
-                    {completedAt && (
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Completado:</Text>
-                            <Text style={styles.value}>{formatDate(completedAt)}</Text>
-                        </View>
-                    )}
+                    {renderInfoRow('Creado', formatDate(createdAt))}
+                    {acceptedAt && renderInfoRow('Aceptado', formatDate(acceptedAt))}
+                    {completedAt && renderInfoRow('Completado', formatDate(completedAt))}
                 </View>
             </View>
         </ScrollView>
@@ -156,55 +165,74 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: '600',
         color: '#1E293B',
-        marginBottom: 12,
+        marginBottom: 16,
     },
-    typeContainer: {
+    priorityContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        justifyContent: 'space-between',
+        marginBottom: 12,
     },
-    typeText: {
-        fontSize: 18,
-        fontWeight: '500',
-        color: '#1E293B',
+    priorityBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    priorityText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    description: {
+        fontSize: 16,
+        color: '#475569',
+        marginTop: 8,
     },
     infoContainer: {
-        gap: 8,
+        gap: 12,
     },
     infoRow: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
     },
     label: {
-        width: 100,
+        width: 140,
         fontSize: 14,
         color: '#64748B',
+        fontWeight: '500',
     },
     value: {
         flex: 1,
         fontSize: 14,
         color: '#1E293B',
     },
-    locationContainer: {
+    phoneContainer: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 12,
+        alignItems: 'center',
+        backgroundColor: '#F0FDF4',
+        padding: 12,
+        borderRadius: 8,
+        gap: 8,
     },
-    locationIcon: {
-        marginTop: 2,
+    phoneText: {
+        color: '#22C55E',
+        fontSize: 16,
+        fontWeight: '600',
     },
-    address: {
-        flex: 1,
+    mapPreview: {
+        height: 200,
+        backgroundColor: '#F1F5F9',
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    mapPlaceholderText: {
+        color: '#94A3B8',
+        marginTop: 8,
         fontSize: 14,
-        color: '#1E293B',
-        lineHeight: 20,
-    },
-    description: {
-        fontSize: 14,
-        color: '#1E293B',
-        lineHeight: 20,
     },
 }); 
