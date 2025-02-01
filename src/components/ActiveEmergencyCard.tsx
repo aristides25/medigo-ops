@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Linking, Alert, TextInput, ScrollView } from 'react-native';
 import { Text, Icon, Button, Overlay } from '@rneui/themed';
-import { EmergencyRequest, EmergencyStatus } from '../types/emergency';
+import { EmergencyRequest, EmergencyStatus, Location } from '../types/emergency';
 
 interface ActiveEmergencyCardProps {
     request: EmergencyRequest;
-    onComplete?: () => void;
+    onComplete?: (completionData: {
+        endTime: string;
+        duration: number;
+        finalLocation: Location;
+        notes: string;
+        summary: string;
+    }) => void;
     onUpdateStatus?: () => void;
     onViewDetails?: () => void;
-    onAddNote?: (note: string) => void;
 }
 
 const getStatusText = (status: EmergencyStatus) => {
@@ -46,10 +51,16 @@ const getUpdateButtonText = (status: EmergencyStatus) => {
 
 export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
     request,
+    onComplete,
     onUpdateStatus,
     onViewDetails
 }) => {
     const [isViewingNotes, setIsViewingNotes] = useState(false);
+    const [isCompletingService, setIsCompletingService] = useState(false);
+    const [selectedQuickNote, setSelectedQuickNote] = useState<string>('');
+    const [completionData, setCompletionData] = useState({
+        notes: '',
+    });
 
     const handleCallPatient = () => {
         if (request.patientInfo.phone) {
@@ -91,6 +102,33 @@ export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
                 }
             ]
         );
+    };
+
+    const handleUpdateStatus = () => {
+        if (request.status === 'ON_SITE') {
+            setIsCompletingService(true);
+        } else {
+            onUpdateStatus?.();
+        }
+    };
+
+    const handleQuickNoteSelect = (note: string) => {
+        setSelectedQuickNote(note);
+        setCompletionData({ notes: note });
+    };
+
+    const handleCompleteService = () => {
+        const endTime = new Date().toISOString();
+        const startTime = new Date(request.serviceDetails?.startTime || request.createdAt);
+        const duration = Math.floor((new Date(endTime).getTime() - startTime.getTime()) / 60000);
+
+        onComplete?.({
+            endTime,
+            duration,
+            finalLocation: request.location,
+            notes: completionData.notes.trim(),
+            summary: selectedQuickNote || 'Servicio completado'
+        });
     };
 
     return (
@@ -166,12 +204,109 @@ export const ActiveEmergencyCard: React.FC<ActiveEmergencyCardProps> = ({
                 {/* Botón de actualizar estado */}
                 <TouchableOpacity 
                     style={[styles.button, styles.updateButton]}
-                    onPress={onUpdateStatus}
+                    onPress={handleUpdateStatus}
                 >
                     <Icon name="check-circle" type="feather" size={20} color="#FFFFFF" />
                     <Text style={styles.buttonText}>{getUpdateButtonText(request.status)}</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Modal para completar servicio */}
+            <Overlay
+                isVisible={isCompletingService}
+                onBackdropPress={() => setIsCompletingService(false)}
+                overlayStyle={styles.overlay}
+            >
+                <View style={styles.completionContainer}>
+                    <Text style={styles.completionTitle}>Completar Servicio</Text>
+                    
+                    {/* Duración del Servicio */}
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Inicio del Servicio:</Text>
+                        <Text style={styles.infoValue}>
+                            {new Date(request.serviceDetails?.startTime || request.createdAt).toLocaleTimeString()}
+                        </Text>
+                    </View>
+                    
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Ubicación Final:</Text>
+                        <Text style={styles.infoValue}>{request.location.address}</Text>
+                    </View>
+
+                    {/* Opciones Rápidas */}
+                    <View style={styles.quickOptions}>
+                        <TouchableOpacity 
+                            style={[
+                                styles.quickOptionButton,
+                                selectedQuickNote === 'Sin incidencias' && styles.quickOptionSelected
+                            ]}
+                            onPress={() => handleQuickNoteSelect('Sin incidencias')}
+                        >
+                            <Text style={[
+                                styles.quickOptionText,
+                                selectedQuickNote === 'Sin incidencias' && styles.quickOptionTextSelected
+                            ]}>Sin incidencias</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[
+                                styles.quickOptionButton,
+                                selectedQuickNote === 'Paciente estable' && styles.quickOptionSelected
+                            ]}
+                            onPress={() => handleQuickNoteSelect('Paciente estable')}
+                        >
+                            <Text style={[
+                                styles.quickOptionText,
+                                selectedQuickNote === 'Paciente estable' && styles.quickOptionTextSelected
+                            ]}>Paciente estable</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[
+                                styles.quickOptionButton,
+                                selectedQuickNote === 'Traslado completado' && styles.quickOptionSelected
+                            ]}
+                            onPress={() => handleQuickNoteSelect('Traslado completado')}
+                        >
+                            <Text style={[
+                                styles.quickOptionText,
+                                selectedQuickNote === 'Traslado completado' && styles.quickOptionTextSelected
+                            ]}>Traslado completado</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Campo de Notas (Opcional) */}
+                    <Text style={styles.inputLabel}>Notas Adicionales (Opcional)</Text>
+                    <TextInput
+                        style={styles.notesInput}
+                        multiline
+                        numberOfLines={4}
+                        placeholder="Añade notas adicionales si es necesario..."
+                        value={completionData.notes}
+                        onChangeText={(text) => {
+                            setCompletionData({ notes: text });
+                            if (text !== selectedQuickNote) {
+                                setSelectedQuickNote('');
+                            }
+                        }}
+                    />
+
+                    <View style={styles.completionActions}>
+                        <Button
+                            title="Cancelar"
+                            type="clear"
+                            onPress={() => {
+                                setIsCompletingService(false);
+                                setSelectedQuickNote('');
+                                setCompletionData({ notes: '' });
+                            }}
+                        />
+                        <Button
+                            title="Completar"
+                            onPress={handleCompleteService}
+                            disabled={!selectedQuickNote}
+                        />
+                    </View>
+                </View>
+            </Overlay>
 
             {/* Modal para ver notas */}
             <Overlay
@@ -337,5 +472,78 @@ const styles = StyleSheet.create({
     notesScrollView: {
         maxHeight: 300,
         marginBottom: 16,
-    }
+    },
+    completionContainer: {
+        padding: 16,
+    },
+    completionTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#1E293B',
+        marginBottom: 20,
+    },
+    infoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    infoLabel: {
+        fontSize: 14,
+        color: '#64748B',
+        flex: 1,
+    },
+    infoValue: {
+        fontSize: 14,
+        color: '#1E293B',
+        fontWeight: '500',
+        flex: 2,
+    },
+    inputLabel: {
+        fontSize: 14,
+        color: '#64748B',
+        marginBottom: 8,
+        marginTop: 12,
+    },
+    notesInput: {
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 8,
+        padding: 12,
+        minHeight: 80,
+        textAlignVertical: 'top',
+        fontSize: 14,
+        color: '#1E293B',
+        backgroundColor: '#F8FAFC',
+    },
+    completionActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 8,
+        marginTop: 20,
+    },
+    quickOptions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginVertical: 16,
+    },
+    quickOptionButton: {
+        backgroundColor: '#F1F5F9',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    quickOptionSelected: {
+        backgroundColor: '#3B82F6',
+        borderColor: '#3B82F6',
+    },
+    quickOptionText: {
+        color: '#1E293B',
+        fontSize: 14,
+    },
+    quickOptionTextSelected: {
+        color: '#FFFFFF',
+    },
 }); 

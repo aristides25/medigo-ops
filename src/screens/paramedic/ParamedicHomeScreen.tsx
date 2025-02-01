@@ -387,6 +387,43 @@ export const ParamedicHomeScreen = () => {
     });
   };
 
+  const handleCompleteService = (completionData: {
+    endTime: string;
+    duration: number;
+    finalLocation: Location;
+    notes: string;
+    summary: string;
+  }) => {
+    if (!activeRequest) return;
+
+    const updatedRequest = {
+      ...activeRequest,
+      status: 'COMPLETED' as const,
+      completedAt: completionData.endTime,
+      serviceDetails: {
+        ...activeRequest.serviceDetails!,
+        endTime: completionData.endTime,
+        duration: completionData.duration,
+        notes: [
+          ...(activeRequest.serviceDetails?.notes || []),
+          ...(completionData.notes ? [completionData.notes] : [])
+        ],
+        stateHistory: [
+          ...(activeRequest.serviceDetails?.stateHistory || []),
+          {
+            state: 'COMPLETED',
+            timestamp: completionData.endTime,
+            notes: completionData.summary
+          }
+        ]
+      }
+    };
+
+    // Actualizar el estado y limpiar el servicio activo
+    setActiveRequest(null);
+    setIsAvailable(true);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
@@ -435,6 +472,7 @@ export const ParamedicHomeScreen = () => {
               <Text style={styles.sectionTitle}>Solicitud Activa</Text>
               <ActiveEmergencyCard
                 request={activeRequest}
+                onComplete={handleCompleteService}
                 onUpdateStatus={handleUpdateStatus}
                 onViewDetails={() => handleViewDetails(activeRequest)}
                 onAddNote={handleAddNote}
