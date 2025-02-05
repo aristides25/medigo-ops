@@ -231,12 +231,19 @@ const EmergencyNotification: React.FC<EmergencyNotificationProps> = ({
 
 export const ParamedicHomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { logout } = useAuth();
+  const { logout, profile } = useAuth();
   const [isAvailable, setIsAvailable] = useState(true);
   const [activeRequest, setActiveRequest] = useState<EmergencyRequest | null>(null);
   const [pendingRequests, setPendingRequests] = useState<EmergencyRequest[]>(MOCK_EMERGENCY_REQUESTS);
   const [newEmergency, setNewEmergency] = useState<EmergencyRequest | null>(null);
   const [notificationVisible, setNotificationVisible] = useState(false);
+
+  // Inicializar isAvailable basado en el estado del perfil
+  useEffect(() => {
+    if (profile) {
+      setIsAvailable(profile.status === 'available');
+    }
+  }, [profile]);
 
   const handleAcceptRequest = (request: EmergencyRequest) => {
     const updatedRequest = {

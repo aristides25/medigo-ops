@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { AuthState, LoginCredentials, ParamedicProfile } from '../types/auth.types';
+import { Role, OperatorType, BaseUser } from '../types/roles.types';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -9,50 +10,68 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Datos de prueba para simular paramédicos registrados
-const MOCK_PARAMEDICS = [
+const MOCK_PARAMEDICS: Array<{ 
+  user: BaseUser, 
+  profile: ParamedicProfile, 
+  password: string 
+}> = [
   {
-    id: 'P001',
-    email: 'juan.perez@medigo.com',
-    password: '123456', // En producción nunca almacenar contraseñas en texto plano
-    firstName: 'Juan',
-    lastName: 'Pérez',
-    phone: '+58 412-1234567',
-    licenseNumber: 'PM-12345',
-    ambulanceUnit: 'AMB-001',
-    hospitalId: 'H001',
-    status: 'available' as const,
-    currentLocation: {
-      latitude: 10.4806,
-      longitude: -66.9036,
+    user: {
+      id: 'P001',
+      role: Role.OPERATOR,
+      operatorType: OperatorType.PARAMEDIC,
+      providerId: 'H001'
     },
-    profileImage: 'https://randomuser.me/api/portraits/men/1.jpg',
-    rating: 4.8,
-    totalServices: 156,
-    certifications: ['BLS', 'ACLS', 'PHTLS'],
-    specializations: ['Trauma', 'Emergencias Cardiovasculares'],
-    lastActive: new Date(),
+    profile: {
+      firstName: 'Juan',
+      lastName: 'Pérez',
+      email: 'juan.perez@medigo.com',
+      phone: '+58 412-1234567',
+      licenseNumber: 'PM-12345',
+      ambulanceUnit: 'AMB-001',
+      hospitalId: 'H001',
+      status: 'available' as const,
+      currentLocation: {
+        latitude: 10.4806,
+        longitude: -66.9036,
+      },
+      profileImage: 'https://randomuser.me/api/portraits/men/1.jpg',
+      rating: 4.8,
+      totalServices: 156,
+      certifications: ['BLS', 'ACLS', 'PHTLS'],
+      specializations: ['Trauma', 'Emergencias Cardiovasculares'],
+      lastActive: new Date()
+    },
+    password: '123456'
   },
   {
-    id: 'P002',
-    email: 'maria.rodriguez@medigo.com',
-    password: '123456',
-    firstName: 'María',
-    lastName: 'Rodríguez',
-    phone: '+58 414-7654321',
-    licenseNumber: 'PM-12346',
-    ambulanceUnit: 'AMB-002',
-    hospitalId: 'H001',
-    status: 'available' as const,
-    currentLocation: {
-      latitude: 10.4806,
-      longitude: -66.9036,
+    user: {
+      id: 'P002',
+      role: Role.OPERATOR,
+      operatorType: OperatorType.PARAMEDIC,
+      providerId: 'H001'
     },
-    profileImage: 'https://randomuser.me/api/portraits/women/1.jpg',
-    rating: 4.9,
-    totalServices: 203,
-    certifications: ['BLS', 'ACLS', 'PHTLS', 'AMLS'],
-    specializations: ['Trauma', 'Emergencias Pediátricas'],
-    lastActive: new Date(),
+    profile: {
+      firstName: 'María',
+      lastName: 'Rodríguez',
+      email: 'maria.rodriguez@medigo.com',
+      phone: '+58 414-7654321',
+      licenseNumber: 'PM-12346',
+      ambulanceUnit: 'AMB-002',
+      hospitalId: 'H001',
+      status: 'available' as const,
+      currentLocation: {
+        latitude: 10.4806,
+        longitude: -66.9036,
+      },
+      profileImage: 'https://randomuser.me/api/portraits/women/1.jpg',
+      rating: 4.9,
+      totalServices: 203,
+      certifications: ['BLS', 'ACLS', 'PHTLS', 'AMLS'],
+      specializations: ['Trauma', 'Emergencias Pediátricas'],
+      lastActive: new Date()
+    },
+    password: '123456'
   }
 ];
 
@@ -61,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: false,
     isLoading: false,
     user: null,
+    profile: null,
     error: null,
   });
 
@@ -72,20 +92,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Buscar paramédico por email
-      const paramedic = MOCK_PARAMEDICS.find(p => p.email === credentials.email);
+      const paramedic = MOCK_PARAMEDICS.find(p => p.profile.email === credentials.email);
       
       if (!paramedic || paramedic.password !== credentials.password) {
         throw new Error('Credenciales inválidas');
       }
 
-      // Omitir el campo password antes de guardar en el estado
-      const { password, ...paramedicData } = paramedic;
-
-      // Actualizamos el estado de forma atómica
+      // Actualizamos el estado con user y profile separados
       setState({
         isAuthenticated: true,
         isLoading: false,
-        user: paramedicData,
+        user: paramedic.user,
+        profile: paramedic.profile,
         error: null,
       });
 
@@ -94,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: false,
         isLoading: false,
         user: null,
+        profile: null,
         error: 'Credenciales inválidas. Por favor verifica tus datos.',
       });
       throw error;
@@ -105,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAuthenticated: false,
       isLoading: false,
       user: null,
+      profile: null,
       error: null,
     });
   }, []);
