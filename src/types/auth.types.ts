@@ -1,50 +1,64 @@
 import { Role, OperatorType, BaseUser } from './roles.types';
 
-export type OperatorRole = 'paramedic' | 'nurse' | 'delivery';
+// Estados posibles para un operador
 export type OperatorStatus = 'available' | 'busy' | 'offline' | 'emergency';
 
-// Información del perfil específica del paramédico
-export interface ParamedicProfile {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  licenseNumber: string;
-  ambulanceUnit: string;
-  hospitalId?: string;  // Legacy - será reemplazado por providerId
-  status: OperatorStatus;
-  currentLocation?: {
-    latitude: number;
-    longitude: number;
-  };
-  profileImage?: string;
-  rating?: number;
-  totalServices?: number;
-  activeEmergency?: {
-    id: string;
-    patientId: string;
-    location: {
-      latitude: number;
-      longitude: number;
+// Información del perfil de operador
+export interface OperatorProfile {
+    // Campos base
+    firstName: string;
+    middleName?: string;
+    lastNames: string;
+    displayName?: string;
+    email: string;
+    phone: string;
+    
+    // Campos específicos del operador
+    licenseNumber: string;
+    status: OperatorStatus;
+    currentLocation?: {
+        latitude: number;
+        longitude: number;
     };
-    status: 'en_route' | 'on_site' | 'transporting' | 'completed';
-    startTime: Date;
-  };
-  certifications: string[];  // Lista de certificaciones médicas
-  specializations: string[]; // Especializaciones (trauma, cardiología, etc.)
-  lastActive?: Date;
+    
+    // Campos de servicio
+    serviceUnit?: string;       // Unidad de servicio (ej: ambulancia, vehículo de delivery)
+    providerId: string;         // ID del proveedor al que pertenece
+    
+    // Campos de perfil
+    profileImage?: string;
+    rating?: number;
+    totalServices?: number;
+    
+    // Campos específicos por tipo de operador
+    certifications?: string[];  // Certificaciones médicas/técnicas
+    specializations?: string[]; // Especializaciones
+    lastActive?: Date;
+    
+    // Campo de emergencia activa (solo para paramédicos)
+    activeEmergency?: {
+        id: string;
+        patientId: string;
+        location: {
+            latitude: number;
+            longitude: number;
+        };
+        status: 'en_route' | 'on_site' | 'transporting' | 'completed';
+        startTime: Date;
+    };
 }
 
-// Estado de autenticación con User y Profile separados
+// Estado de autenticación
 export interface AuthState {
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  user: BaseUser | null;
-  profile: ParamedicProfile | null;
-  error: string | null;
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    user: BaseUser | null;
+    profile: OperatorProfile | null;
+    error: string | null;
 }
 
+// Credenciales de login
 export interface LoginCredentials {
-  email: string;
-  password: string;
+    email: string;
+    password: string;
 } 

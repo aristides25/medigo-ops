@@ -5,18 +5,28 @@ export enum Role {
 
 // Tipos de operadores
 export enum OperatorType {
-    PARAMEDIC = 'PARAMEDIC'  // Solo necesitamos PARAMEDIC en esta app
+    TRANSPORT = 'TRANSPORT',    // Para MEDICAL_CENTER
+    COURIER = 'COURIER',        // Para PHARMACY
+    TECHNICIAN = 'TECHNICIAN',  // Para LABORATORY
+    PARAMEDIC = 'PARAMEDIC',    // Para EMERGENCY
+    CAREGIVER = 'CAREGIVER'     // Para HOMECARE
 }
 
 // Tipos de proveedores
 export enum ProviderType {
-    EMERGENCY = 'EMERGENCY'  // Solo necesitamos EMERGENCY en esta app
+    MEDICAL_CENTER = 'MEDICAL_CENTER',
+    PHARMACY = 'PHARMACY',
+    LABORATORY = 'LABORATORY',
+    EMERGENCY = 'EMERGENCY',
+    HOMECARE = 'HOMECARE',
+    OFFICE_SPECIALIST = 'OFFICE_SPECIALIST',
+    VIRTUAL_SPECIALIST = 'VIRTUAL_SPECIALIST'
 }
 
 // Estructura base de usuario
 export interface BaseUser {
     id: string;
-    role: Role;
-    operatorType?: OperatorType;
-    providerId?: string;
+    role: Role;                 // Siempre será OPERATOR en medigo-ops
+    operatorType: OperatorType; // Tipo específico de operador
+    providerId: string;         // ID del proveedor al que pertenece
 } 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { AuthState, LoginCredentials, ParamedicProfile } from '../types/auth.types';
+import { AuthState, LoginCredentials, OperatorProfile } from '../types/auth.types';
 import { Role, OperatorType, BaseUser } from '../types/roles.types';
 
 interface AuthContextType extends AuthState {
@@ -9,10 +9,10 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Datos de prueba para simular paramédicos registrados
-const MOCK_PARAMEDICS: Array<{ 
+// Datos de prueba para simular operadores registrados
+const MOCK_OPERATORS: Array<{ 
   user: BaseUser, 
-  profile: ParamedicProfile, 
+  profile: OperatorProfile, 
   password: string 
 }> = [
   {
@@ -24,13 +24,13 @@ const MOCK_PARAMEDICS: Array<{
     },
     profile: {
       firstName: 'Juan',
-      lastName: 'Pérez',
+      lastNames: 'Pérez',
       email: 'juan.perez@medigo.com',
       phone: '+58 412-1234567',
       licenseNumber: 'PM-12345',
-      ambulanceUnit: 'AMB-001',
-      hospitalId: 'H001',
-      status: 'available' as const,
+      serviceUnit: 'AMB-001',
+      providerId: 'H001',
+      status: 'available',
       currentLocation: {
         latitude: 10.4806,
         longitude: -66.9036,
@@ -53,13 +53,13 @@ const MOCK_PARAMEDICS: Array<{
     },
     profile: {
       firstName: 'María',
-      lastName: 'Rodríguez',
+      lastNames: 'Rodríguez',
       email: 'maria.rodriguez@medigo.com',
       phone: '+58 414-7654321',
       licenseNumber: 'PM-12346',
-      ambulanceUnit: 'AMB-002',
-      hospitalId: 'H001',
-      status: 'available' as const,
+      serviceUnit: 'AMB-002',
+      providerId: 'H001',
+      status: 'available',
       currentLocation: {
         latitude: 10.4806,
         longitude: -66.9036,
@@ -91,19 +91,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulación de delay de red
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Buscar paramédico por email
-      const paramedic = MOCK_PARAMEDICS.find(p => p.profile.email === credentials.email);
+      // Buscar operador por email
+      const operator = MOCK_OPERATORS.find(p => p.profile.email === credentials.email);
       
-      if (!paramedic || paramedic.password !== credentials.password) {
+      if (!operator || operator.password !== credentials.password) {
         throw new Error('Credenciales inválidas');
       }
 
-      // Actualizamos el estado con user y profile separados
       setState({
         isAuthenticated: true,
         isLoading: false,
-        user: paramedic.user,
-        profile: paramedic.profile,
+        user: operator.user,
+        profile: operator.profile,
         error: null,
       });
 
